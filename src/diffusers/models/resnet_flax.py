@@ -25,7 +25,7 @@ class FlaxUpsample2D(nn.Module):
             self.out_channels,
             kernel_size=(3, 3),
             strides=(1, 1),
-            padding=((1, 1), (1, 1)),
+            padding="CIRCULAR",
             dtype=self.dtype,
         )
 
@@ -49,7 +49,7 @@ class FlaxDownsample2D(nn.Module):
             self.out_channels,
             kernel_size=(3, 3),
             strides=(2, 2),
-            padding=((1, 1), (1, 1)),  # padding="VALID",
+            padding="CIRCULAR",  # padding="CIRCULAR",
             dtype=self.dtype,
         )
 
@@ -75,7 +75,7 @@ class FlaxResnetBlock2D(nn.Module):
             out_channels,
             kernel_size=(3, 3),
             strides=(1, 1),
-            padding=((1, 1), (1, 1)),
+            padding="CIRCULAR",
             dtype=self.dtype,
         )
 
@@ -87,7 +87,7 @@ class FlaxResnetBlock2D(nn.Module):
             out_channels,
             kernel_size=(3, 3),
             strides=(1, 1),
-            padding=((1, 1), (1, 1)),
+            padding="CIRCULAR",
             dtype=self.dtype,
         )
 
@@ -99,7 +99,7 @@ class FlaxResnetBlock2D(nn.Module):
                 out_channels,
                 kernel_size=(1, 1),
                 strides=(1, 1),
-                padding="VALID",
+                padding="CIRCULAR",
                 dtype=self.dtype,
             )
 

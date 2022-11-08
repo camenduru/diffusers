@@ -177,7 +177,7 @@ class FlaxTransformer2DModel(nn.Module):
             inner_dim,
             kernel_size=(1, 1),
             strides=(1, 1),
-            padding="VALID",
+            padding="CIRCULAR",
             dtype=self.dtype,
         )
 
@@ -190,7 +190,7 @@ class FlaxTransformer2DModel(nn.Module):
             inner_dim,
             kernel_size=(1, 1),
             strides=(1, 1),
-            padding="VALID",
+            padding="CIRCULAR",
             dtype=self.dtype,
         )
 
