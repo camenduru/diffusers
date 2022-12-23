@@ -436,6 +436,23 @@ class ModelMixin(torch.nn.Module):
         # Load model
 
         model_file = None
+        if from_flax():
+            try:
+                model_file = cls._get_model_file(
+                    pretrained_model_name_or_path,
+                    weights_name=FLAX_WEIGHTS_NAME,
+                    cache_dir=cache_dir,
+                    force_download=force_download,
+                    resume_download=resume_download,
+                    proxies=proxies,
+                    local_files_only=local_files_only,
+                    use_auth_token=use_auth_token,
+                    revision=revision,
+                    subfolder=subfolder,
+                    user_agent=user_agent,
+                )
+            except:
+                pass
         if is_safetensors_available():
             try:
                 model_file = cls._get_model_file(
@@ -505,6 +522,7 @@ class ModelMixin(torch.nn.Module):
                 "mismatched_keys": [],
                 "error_msgs": [],
             }
+
         if from_flax:
             if is_flax_available():
                 config, unused_kwargs = cls.load_config(
@@ -613,30 +631,17 @@ class ModelMixin(torch.nn.Module):
     ):
         pretrained_model_name_or_path = str(pretrained_model_name_or_path)
         if os.path.isdir(pretrained_model_name_or_path):
-            if from_flax:
-                if os.path.isfile(os.path.join(pretrained_model_name_or_path, FLAX_WEIGHTS_NAME)):
-                    # Load from a PyTorch checkpoint
-                    model_file = os.path.join(pretrained_model_name_or_path, FLAX_WEIGHTS_NAME)
-                elif subfolder is not None and os.path.isfile(
-                    os.path.join(pretrained_model_name_or_path, subfolder, FLAX_WEIGHTS_NAME)
-                ):
-                    model_file = os.path.join(pretrained_model_name_or_path, subfolder, FLAX_WEIGHTS_NAME)
-                else:
-                    raise EnvironmentError(
-                        f"Error no file named {FLAX_WEIGHTS_NAME} found in directory {pretrained_model_name_or_path}."
-                    )
+            if os.path.isfile(os.path.join(pretrained_model_name_or_path, weights_name)):
+                # Load from a PyTorch checkpoint
+                model_file = os.path.join(pretrained_model_name_or_path, weights_name)
+            elif subfolder is not None and os.path.isfile(
+                os.path.join(pretrained_model_name_or_path, subfolder, weights_name)
+            ):
+                model_file = os.path.join(pretrained_model_name_or_path, subfolder, weights_name)
             else:
-                if os.path.isfile(os.path.join(pretrained_model_name_or_path, weights_name)):
-                    # Load from a PyTorch checkpoint
-                    model_file = os.path.join(pretrained_model_name_or_path, weights_name)
-                elif subfolder is not None and os.path.isfile(
-                    os.path.join(pretrained_model_name_or_path, subfolder, weights_name)
-                ):
-                    model_file = os.path.join(pretrained_model_name_or_path, subfolder, weights_name)
-                else:
-                    raise EnvironmentError(
-                        f"Error no file named {weights_name} found in directory {pretrained_model_name_or_path}."
-                    )
+                raise EnvironmentError(
+                    f"Error no file named {weights_name} found in directory {pretrained_model_name_or_path}."
+                )
             return model_file
         else:
             try:
