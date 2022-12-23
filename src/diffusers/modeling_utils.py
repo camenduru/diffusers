@@ -648,7 +648,7 @@ class ModelMixin(torch.nn.Module):
                 # Load from URL or cache if already cached
                 model_file = hf_hub_download(
                     pretrained_model_name_or_path,
-                    filename=weights_name if not from_flax else FLAX_WEIGHTS_NAME,
+                    filename=weights_name,
                     cache_dir=cache_dir,
                     force_download=force_download,
                     proxies=proxies,

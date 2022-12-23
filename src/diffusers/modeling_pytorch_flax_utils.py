@@ -37,7 +37,7 @@ logger = logging.get_logger(__name__)
 
 
 # from https://github.com/huggingface/transformers/blob/main/src/transformers/modeling_flax_pytorch_utils.py#L224-L352
-def load_flax_checkpoint_in_pytorch_model(model, model_file):
+def load_flax_checkpoint_in_pytorch_model(pt_model, model_file):
     try:
         with open(model_file, "rb") as flax_state_f:
             flax_state = from_bytes(cls, flax_state_f.read())
@@ -61,7 +61,7 @@ def load_flax_checkpoint_in_pytorch_model(model, model_file):
     # flax_state = jax.tree_util.tree_map(lambda x: jax.device_put(x, jax.devices("cpu")[0]), flax_state)
     # flax_state = flatten_dict(flax_state)
 
-    return load_flax_weights_in_pytorch_model(model, flax_state)
+    return load_flax_weights_in_pytorch_model(pt_model, flax_state)
 
 
 def load_flax_weights_in_pytorch_model(pt_model, flax_state):
@@ -70,59 +70,12 @@ def load_flax_weights_in_pytorch_model(pt_model, flax_state):
     flax_state = jax.tree_util.tree_map(lambda x: jax.device_put(x, jax.devices("cpu")[0]), flax_state)
     flax_state = flatten_dict(flax_state)
 
-    params_shape_tree = jax.eval_shape(model.init_weights, rng=jax.random.PRNGKey(0))
-    required_params = set(flatten_dict(unfreeze(params_shape_tree)).keys())
-
-    shape_state = flatten_dict(unfreeze(params_shape_tree))
-
-    missing_keys = required_params - set(state.keys())
-    unexpected_keys = set(state.keys()) - required_params
-
-    if missing_keys:
-        logger.warning(
-            f"The checkpoint {pretrained_model_name_or_path} is missing required keys: {missing_keys}. "
-            "Make sure to call model.init_weights to initialize the missing weights."
-        )
-        cls._missing_keys = missing_keys
-
-    for key in state.keys():
-        if key in shape_state and state[key].shape != shape_state[key].shape:
-            raise ValueError(
-                f"Trying to load the pretrained weight for {key} failed: checkpoint has shape "
-                f"{state[key].shape} which is incompatible with the model shape {shape_state[key].shape}. "
-            )
-
-    # remove unexpected keys to not be saved again
-    for unexpected_key in unexpected_keys:
-        del state[unexpected_key]
-
-    if len(unexpected_keys) > 0:
-        logger.warning(
-            f"Some weights of the model checkpoint at {pretrained_model_name_or_path} were not used when"
-            f" initializing {model.__class__.__name__}: {unexpected_keys}\n- This IS expected if you are"
-            f" initializing {model.__class__.__name__} from the checkpoint of a model trained on another task or"
-            " with another architecture."
-        )
-    else:
-        logger.info(f"All model checkpoint weights were used when initializing {model.__class__.__name__}.\n")
-
-    if len(missing_keys) > 0:
-        logger.warning(
-            f"Some weights of {model.__class__.__name__} were not initialized from the model checkpoint at"
-            f" {pretrained_model_name_or_path} and are newly initialized: {missing_keys}\nYou should probably"
-            " TRAIN this model on a down-stream task to be able to use it for predictions and inference."
-        )
-    else:
-        logger.info(
-            f"All the weights of {model.__class__.__name__} were initialized from the model checkpoint at"
-            f" {pretrained_model_name_or_path}.\nIf your task is similar to the task the model of the checkpoint"
-            f" was trained on, you can already use {model.__class__.__name__} for predictions without further"
-            " training."
-        )
+    with open("/content/flax_nested_state_dict_keys_flattened.txt", "w") as f:
+        for key in sorted(flax_state.keys()):
+            f.write(key + "\n")
 
     # return model, unflatten_dict(state)
-    return model
-
+    return pt_model
 
     # try:
     #     import torch  # noqa: F401
