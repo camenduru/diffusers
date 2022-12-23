@@ -436,7 +436,7 @@ class ModelMixin(torch.nn.Module):
         # Load model
 
         model_file = None
-        if from_flax():
+        if from_flax:
             try:
                 model_file = cls._get_model_file(
                     pretrained_model_name_or_path,
