@@ -444,6 +444,7 @@ class DiffusionPipeline(ConfigMixin):
         local_files_only = kwargs.pop("local_files_only", HF_HUB_OFFLINE)
         use_auth_token = kwargs.pop("use_auth_token", None)
         revision = kwargs.pop("revision", None)
+        from_flax = kwargs.pop("from_flax", False)
         torch_dtype = kwargs.pop("torch_dtype", None)
         custom_pipeline = kwargs.pop("custom_pipeline", None)
         custom_revision = kwargs.pop("custom_revision", None)
@@ -705,6 +706,8 @@ class DiffusionPipeline(ConfigMixin):
 
                 # check if the module is in a subdirectory
                 if os.path.isdir(os.path.join(cached_folder, name)):
+                    if from_flax:
+                        loading_kwargs["from_flax"] = True
                     loaded_sub_model = load_method(os.path.join(cached_folder, name), **loading_kwargs)
                 else:
                     # else load from the root directory
