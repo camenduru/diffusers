@@ -58,8 +58,8 @@ def load_flax_checkpoint_in_pytorch_model(model, model_file):
     # NOTE: This is to prevent a bug this will be fixed in Flax >= v0.3.4:
     # https://github.com/google/flax/issues/1261
     
-    flax_state = jax.tree_util.tree_map(lambda x: jax.device_put(x, jax.devices("cpu")[0]), flax_state)
-    flax_state = flatten_dict(flax_state)
+    # flax_state = jax.tree_util.tree_map(lambda x: jax.device_put(x, jax.devices("cpu")[0]), flax_state)
+    # flax_state = flatten_dict(flax_state)
 
     return load_flax_weights_in_pytorch_model(model, flax_state)
 
@@ -67,17 +67,72 @@ def load_flax_checkpoint_in_pytorch_model(model, model_file):
 def load_flax_weights_in_pytorch_model(pt_model, flax_state):
     """Load flax checkpoints in a PyTorch model"""
 
-    try:
-        import torch  # noqa: F401
-    except ImportError:
-        logger.error(
-            "Loading a Flax weights in PyTorch, requires both PyTorch and Flax to be installed. Please see"
-            " https://pytorch.org/ and https://flax.readthedocs.io/en/latest/installation.html for installation"
-            " instructions."
-        )
-        raise
-
     flax_state = jax.tree_util.tree_map(lambda x: jax.device_put(x, jax.devices("cpu")[0]), flax_state)
+    flax_state = flatten_dict(flax_state)
+
+    params_shape_tree = jax.eval_shape(model.init_weights, rng=jax.random.PRNGKey(0))
+    required_params = set(flatten_dict(unfreeze(params_shape_tree)).keys())
+
+    shape_state = flatten_dict(unfreeze(params_shape_tree))
+
+    missing_keys = required_params - set(state.keys())
+    unexpected_keys = set(state.keys()) - required_params
+
+    if missing_keys:
+        logger.warning(
+            f"The checkpoint {pretrained_model_name_or_path} is missing required keys: {missing_keys}. "
+            "Make sure to call model.init_weights to initialize the missing weights."
+        )
+        cls._missing_keys = missing_keys
+
+    for key in state.keys():
+        if key in shape_state and state[key].shape != shape_state[key].shape:
+            raise ValueError(
+                f"Trying to load the pretrained weight for {key} failed: checkpoint has shape "
+                f"{state[key].shape} which is incompatible with the model shape {shape_state[key].shape}. "
+            )
+
+    # remove unexpected keys to not be saved again
+    for unexpected_key in unexpected_keys:
+        del state[unexpected_key]
+
+    if len(unexpected_keys) > 0:
+        logger.warning(
+            f"Some weights of the model checkpoint at {pretrained_model_name_or_path} were not used when"
+            f" initializing {model.__class__.__name__}: {unexpected_keys}\n- This IS expected if you are"
+            f" initializing {model.__class__.__name__} from the checkpoint of a model trained on another task or"
+            " with another architecture."
+        )
+    else:
+        logger.info(f"All model checkpoint weights were used when initializing {model.__class__.__name__}.\n")
+
+    if len(missing_keys) > 0:
+        logger.warning(
+            f"Some weights of {model.__class__.__name__} were not initialized from the model checkpoint at"
+            f" {pretrained_model_name_or_path} and are newly initialized: {missing_keys}\nYou should probably"
+            " TRAIN this model on a down-stream task to be able to use it for predictions and inference."
+        )
+    else:
+        logger.info(
+            f"All the weights of {model.__class__.__name__} were initialized from the model checkpoint at"
+            f" {pretrained_model_name_or_path}.\nIf your task is similar to the task the model of the checkpoint"
+            f" was trained on, you can already use {model.__class__.__name__} for predictions without further"
+            " training."
+        )
+
+    # return model, unflatten_dict(state)
+    return model
+
+
+    # try:
+    #     import torch  # noqa: F401
+    # except ImportError:
+    #     logger.error(
+    #         "Loading a Flax weights in PyTorch, requires both PyTorch and Flax to be installed. Please see"
+    #         " https://pytorch.org/ and https://flax.readthedocs.io/en/latest/installation.html for installation"
+    #         " instructions."
+    #     )
+    #     raise
 
     # # check if we have bf16 weights
     # is_type_bf16 = flatten_dict(jax.tree_util.tree_map(lambda x: x.dtype == jnp.bfloat16, flax_state)).values()
@@ -92,7 +147,7 @@ def load_flax_weights_in_pytorch_model(pt_model, flax_state):
     #         lambda params: params.astype(np.float32) if params.dtype == jnp.bfloat16 else params, flax_state
     #     )
 
-    print(pt_model.base_model_prefix)
+    # print(pt_model.base_model_prefix)
 
 
     # pt_model.base_model_prefix = ""
@@ -182,4 +237,4 @@ def load_flax_weights_in_pytorch_model(pt_model, flax_state):
     #         f"you can already use {pt_model.__class__.__name__} for predictions without further training."
     #     )
 
-    return pt_model
+    # return pt_model
