@@ -25,7 +25,7 @@ from huggingface_hub import hf_hub_download
 from huggingface_hub.utils import EntryNotFoundError, RepositoryNotFoundError, RevisionNotFoundError
 from requests import HTTPError
 
-from . import __version__
+from . import __version__, is_flax_available
 from .hub_utils import HF_HUB_OFFLINE
 from .utils import (
     CONFIG_NAME,
@@ -33,6 +33,7 @@ from .utils import (
     HUGGINGFACE_CO_RESOLVE_ENDPOINT,
     SAFETENSORS_WEIGHTS_NAME,
     WEIGHTS_NAME,
+    FLAX_WEIGHTS_NAME,
     is_accelerate_available,
     is_safetensors_available,
     is_torch_version,
@@ -334,6 +335,8 @@ class ModelMixin(torch.nn.Module):
                 The specific model version to use. It can be a branch name, a tag name, or a commit id, since we use a
                 git-based system for storing models and other artifacts on huggingface.co, so `revision` can be any
                 identifier allowed by git.
+            from_flax (`bool`, *optional*, defaults to `False`):
+                Load the model weights from a Flax checkpoint save file.
             subfolder (`str`, *optional*, defaults to `""`):
                 In case the relevant files are located inside a subfolder of the model repo (either remote in
                 huggingface.co or downloaded locally), you can specify the folder name here.
@@ -374,6 +377,7 @@ class ModelMixin(torch.nn.Module):
         cache_dir = kwargs.pop("cache_dir", DIFFUSERS_CACHE)
         ignore_mismatched_sizes = kwargs.pop("ignore_mismatched_sizes", False)
         force_download = kwargs.pop("force_download", False)
+        from_flax = kwargs.pop("from_flax", False)
         resume_download = kwargs.pop("resume_download", False)
         proxies = kwargs.pop("proxies", None)
         output_loading_info = kwargs.pop("output_loading_info", False)
@@ -501,6 +505,32 @@ class ModelMixin(torch.nn.Module):
                 "mismatched_keys": [],
                 "error_msgs": [],
             }
+        if from_flax:
+            if is_flax_available():
+                config, unused_kwargs = cls.load_config(
+                    config_path,
+                    cache_dir=cache_dir,
+                    return_unused_kwargs=True,
+                    force_download=force_download,
+                    resume_download=resume_download,
+                    proxies=proxies,
+                    local_files_only=local_files_only,
+                    use_auth_token=use_auth_token,
+                    revision=revision,
+                    subfolder=subfolder,
+                    device_map=device_map,
+                    **kwargs,
+                )
+                model = cls.from_config(config, **unused_kwargs)
+
+                # Convert the weights
+                from .modeling_pytorch_flax_utils import load_flax_checkpoint_in_pytorch_model
+                model = load_flax_checkpoint_in_pytorch_model(model, model_file)
+            else:
+                raise EnvironmentError(
+                    "Can't load the model in Flax format because Flax or PyTorch is not installed. "
+                    "Please, install Flax and PyTorch or use native PyTorch weights."
+                )
         else:
             config, unused_kwargs = cls.load_config(
                 config_path,
@@ -583,24 +613,37 @@ class ModelMixin(torch.nn.Module):
     ):
         pretrained_model_name_or_path = str(pretrained_model_name_or_path)
         if os.path.isdir(pretrained_model_name_or_path):
-            if os.path.isfile(os.path.join(pretrained_model_name_or_path, weights_name)):
-                # Load from a PyTorch checkpoint
-                model_file = os.path.join(pretrained_model_name_or_path, weights_name)
-            elif subfolder is not None and os.path.isfile(
-                os.path.join(pretrained_model_name_or_path, subfolder, weights_name)
-            ):
-                model_file = os.path.join(pretrained_model_name_or_path, subfolder, weights_name)
+            if from_flax:
+                if os.path.isfile(os.path.join(pretrained_model_name_or_path, FLAX_WEIGHTS_NAME)):
+                    # Load from a PyTorch checkpoint
+                    model_file = os.path.join(pretrained_model_name_or_path, FLAX_WEIGHTS_NAME)
+                elif subfolder is not None and os.path.isfile(
+                    os.path.join(pretrained_model_name_or_path, subfolder, FLAX_WEIGHTS_NAME)
+                ):
+                    model_file = os.path.join(pretrained_model_name_or_path, subfolder, FLAX_WEIGHTS_NAME)
+                else:
+                    raise EnvironmentError(
+                        f"Error no file named {FLAX_WEIGHTS_NAME} found in directory {pretrained_model_name_or_path}."
+                    )
             else:
-                raise EnvironmentError(
-                    f"Error no file named {weights_name} found in directory {pretrained_model_name_or_path}."
-                )
+                if os.path.isfile(os.path.join(pretrained_model_name_or_path, weights_name)):
+                    # Load from a PyTorch checkpoint
+                    model_file = os.path.join(pretrained_model_name_or_path, weights_name)
+                elif subfolder is not None and os.path.isfile(
+                    os.path.join(pretrained_model_name_or_path, subfolder, weights_name)
+                ):
+                    model_file = os.path.join(pretrained_model_name_or_path, subfolder, weights_name)
+                else:
+                    raise EnvironmentError(
+                        f"Error no file named {weights_name} found in directory {pretrained_model_name_or_path}."
+                    )
             return model_file
         else:
             try:
                 # Load from URL or cache if already cached
                 model_file = hf_hub_download(
                     pretrained_model_name_or_path,
-                    filename=weights_name,
+                    filename=weights_name if not from_flax else FLAX_WEIGHTS_NAME,
                     cache_dir=cache_dir,
                     force_download=force_download,
                     proxies=proxies,
