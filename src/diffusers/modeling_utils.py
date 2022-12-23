@@ -436,23 +436,6 @@ class ModelMixin(torch.nn.Module):
         # Load model
 
         model_file = None
-        if is_flax_available():
-            try:
-                model_file = cls._get_model_file(
-                    pretrained_model_name_or_path,
-                    weights_name=FLAX_WEIGHTS_NAME,
-                    cache_dir=cache_dir,
-                    force_download=force_download,
-                    resume_download=resume_download,
-                    proxies=proxies,
-                    local_files_only=local_files_only,
-                    use_auth_token=use_auth_token,
-                    revision=revision,
-                    subfolder=subfolder,
-                    user_agent=user_agent,
-                )
-            except:
-                pass
         if is_safetensors_available():
             try:
                 model_file = cls._get_model_file(
@@ -473,7 +456,7 @@ class ModelMixin(torch.nn.Module):
         if model_file is None:
             model_file = cls._get_model_file(
                 pretrained_model_name_or_path,
-                weights_name=WEIGHTS_NAME,
+                weights_name=WEIGHTS_NAME if not from_flax else FLAX_WEIGHTS_NAME,
                 cache_dir=cache_dir,
                 force_download=force_download,
                 resume_download=resume_download,
