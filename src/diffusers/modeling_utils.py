@@ -436,7 +436,7 @@ class ModelMixin(torch.nn.Module):
         # Load model
 
         model_file = None
-        if from_flax:
+        if is_flax_available():
             try:
                 model_file = cls._get_model_file(
                     pretrained_model_name_or_path,
@@ -484,7 +484,6 @@ class ModelMixin(torch.nn.Module):
                 subfolder=subfolder,
                 user_agent=user_agent,
             )
-
         if low_cpu_mem_usage:
             # Instantiate model with empty weights
             with accelerate.init_empty_weights():
@@ -522,7 +521,6 @@ class ModelMixin(torch.nn.Module):
                 "mismatched_keys": [],
                 "error_msgs": [],
             }
-
         if from_flax:
             if is_flax_available():
                 config, unused_kwargs = cls.load_config(
