@@ -67,14 +67,14 @@ def load_flax_checkpoint_in_pytorch_model(pt_model, model_file):
 def load_flax_weights_in_pytorch_model(pt_model, flax_state):
     """Load flax checkpoints in a PyTorch model"""
 
-    flax_state = jax.tree_util.tree_map(lambda x: jax.device_put(x, jax.devices("cpu")[0]), flax_state)
-    flax_state = flatten_dict(flax_state)
+    # flax_state = jax.tree_util.tree_map(lambda x: jax.device_put(x, jax.devices("cpu")[0]), flax_state)
+    # flax_state = flatten_dict(flax_state)
 
-    with open("/content/flax_nested_state_dict_keys_flattened.txt", "w") as f:
-        for key in sorted(flax_state.keys()):
-            f.write(key + "\n")
+    # with open("/content/flax_nested_state_dict_keys_flattened.txt", "w") as f:
+    #     for key in sorted(flax_state.keys()):
+    #         f.write(key + "\n")
 
-    return model, unflatten_dict(state)
+    # return model, unflatten_dict(state)
 
     try:
         import torch  # noqa: F401
