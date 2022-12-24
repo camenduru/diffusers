@@ -78,7 +78,7 @@ def load_flax_weights_in_pytorch_model(pt_model, flax_state):
     # return model, unflatten_dict(state)
 
     # try:
-        import torch  # noqa: F401
+    import torch  # noqa: F401
     except ImportError:
         logger.error(
             "Loading a Flax weights in PyTorch, requires both PyTorch and Flax to be installed. Please see"
