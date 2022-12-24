@@ -165,7 +165,6 @@ def load_flax_weights_in_pytorch_model(pt_model, flax_state):
         elif flax_key_tuple_array[-1] == "kernel":
             flax_key_tuple_array = flax_key_tuple_array[:-1] +  ["weight"]
             flax_tensor = flax_tensor.T
-            print(flax_key_tuple)
         elif flax_key_tuple_array[-1] == "scale":
             flax_key_tuple_array = flax_key_tuple_array[:-1] + ["weight"]
 
