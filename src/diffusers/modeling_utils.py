@@ -545,52 +545,52 @@ class ModelMixin(torch.nn.Module):
                     "error_msgs": [],
                 }
             else:
-            config, unused_kwargs = cls.load_config(
-                config_path,
-                cache_dir=cache_dir,
-                return_unused_kwargs=True,
-                force_download=force_download,
-                resume_download=resume_download,
-                proxies=proxies,
-                local_files_only=local_files_only,
-                use_auth_token=use_auth_token,
-                revision=revision,
-                subfolder=subfolder,
-                device_map=device_map,
-                **kwargs,
-            )
-            model = cls.from_config(config, **unused_kwargs)
-
-            state_dict = load_state_dict(model_file)
-            dtype = set(v.dtype for v in state_dict.values())
-
-            if len(dtype) > 1 and torch.float32 not in dtype:
-                raise ValueError(
-                    f"The weights of the model file {model_file} have a mixture of incompatible dtypes {dtype}. Please"
-                    f" make sure that {model_file} weights have only one dtype."
+                config, unused_kwargs = cls.load_config(
+                    config_path,
+                    cache_dir=cache_dir,
+                    return_unused_kwargs=True,
+                    force_download=force_download,
+                    resume_download=resume_download,
+                    proxies=proxies,
+                    local_files_only=local_files_only,
+                    use_auth_token=use_auth_token,
+                    revision=revision,
+                    subfolder=subfolder,
+                    device_map=device_map,
+                    **kwargs,
                 )
-            elif len(dtype) > 1 and torch.float32 in dtype:
-                dtype = torch.float32
-            else:
-                dtype = dtype.pop()
+                model = cls.from_config(config, **unused_kwargs)
 
-            # move model to correct dtype
-            model = model.to(dtype)
+                state_dict = load_state_dict(model_file)
+                dtype = set(v.dtype for v in state_dict.values())
 
-            model, missing_keys, unexpected_keys, mismatched_keys, error_msgs = cls._load_pretrained_model(
-                model,
-                state_dict,
-                model_file,
-                pretrained_model_name_or_path,
-                ignore_mismatched_sizes=ignore_mismatched_sizes,
-            )
+                if len(dtype) > 1 and torch.float32 not in dtype:
+                    raise ValueError(
+                        f"The weights of the model file {model_file} have a mixture of incompatible dtypes {dtype}. Please"
+                        f" make sure that {model_file} weights have only one dtype."
+                    )
+                elif len(dtype) > 1 and torch.float32 in dtype:
+                    dtype = torch.float32
+                else:
+                    dtype = dtype.pop()
 
-            loading_info = {
-                "missing_keys": missing_keys,
-                "unexpected_keys": unexpected_keys,
-                "mismatched_keys": mismatched_keys,
-                "error_msgs": error_msgs,
-            }
+                # move model to correct dtype
+                model = model.to(dtype)
+
+                model, missing_keys, unexpected_keys, mismatched_keys, error_msgs = cls._load_pretrained_model(
+                    model,
+                    state_dict,
+                    model_file,
+                    pretrained_model_name_or_path,
+                    ignore_mismatched_sizes=ignore_mismatched_sizes,
+                )
+
+                loading_info = {
+                    "missing_keys": missing_keys,
+                    "unexpected_keys": unexpected_keys,
+                    "mismatched_keys": mismatched_keys,
+                    "error_msgs": error_msgs,
+                }
 
         if torch_dtype is not None and not isinstance(torch_dtype, torch.dtype):
             raise ValueError(
