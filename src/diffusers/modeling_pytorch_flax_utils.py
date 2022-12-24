@@ -155,7 +155,7 @@ def load_flax_weights_in_pytorch_model(pt_model, flax_state):
     #         # weight is not expected by PyTorch model
     #         unexpected_keys.append(flax_key)
 
-    for flax_key_tuple, flax_tensor in sorted(flax_vae_nested_state_dict_flattened.items()):
+    for flax_key_tuple, flax_tensor in sorted(flax_state_dict.items()):
         flax_key_tuple_array = flax_key_tuple.split('.')
         if flax_key_tuple_array[-1] == "kernel" and flax_tensor.ndim == 4:
             flax_key_tuple_array = flax_key_tuple_array[:-1] + ["weight"]
