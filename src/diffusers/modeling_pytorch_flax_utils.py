@@ -171,8 +171,9 @@ def load_flax_weights_in_pytorch_model(pt_model, flax_state):
         for i, flax_key_tuple_string in enumerate(flax_key_tuple_array):
             if not "time_embedding" in flax_key_tuple_string:
                 flax_key_tuple_array[i] = flax_key_tuple_string.replace('_0', '.0').replace('_1', '.1').replace('_2', '.2').replace('_3', '.3')
-
-        flax_key = ".".join(flax_key_tuple_array)
+            
+        if not "time_embedding" in flax_key_tuple:
+            flax_key_tuple = ".".join(flax_key_tuple_array)
 
         if flax_key in pt_model_dict:
             if flax_tensor.shape != pt_model_dict[flax_key].shape:
