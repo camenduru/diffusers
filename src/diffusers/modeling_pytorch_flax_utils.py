@@ -40,7 +40,7 @@ logger = logging.get_logger(__name__)
 def load_flax_checkpoint_in_pytorch_model(pt_model, model_file):
     try:
         with open(model_file, "rb") as flax_state_f:
-            flax_state = from_bytes(cls, flax_state_f.read())
+            flax_state = from_bytes(None, flax_state_f.read())
     except (UnpicklingError, msgpack.exceptions.ExtraData) as e:
         try:
             with open(model_file) as f:
