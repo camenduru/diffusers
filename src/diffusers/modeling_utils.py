@@ -436,6 +436,45 @@ class ModelMixin(torch.nn.Module):
         # Load model
 
         model_file = None
+        if from_flax:
+            if is_flax_available():
+                model_file = cls._get_model_file(
+                    pretrained_model_name_or_path,
+                    weights_name=FLAX_WEIGHTS_NAME,
+                    cache_dir=cache_dir,
+                    force_download=force_download,
+                    resume_download=resume_download,
+                    proxies=proxies,
+                    local_files_only=local_files_only,
+                    use_auth_token=use_auth_token,
+                    revision=revision,
+                    subfolder=subfolder,
+                    user_agent=user_agent,
+                )
+                config, unused_kwargs = cls.load_config(
+                    config_path,
+                    cache_dir=cache_dir,
+                    return_unused_kwargs=True,
+                    force_download=force_download,
+                    resume_download=resume_download,
+                    proxies=proxies,
+                    local_files_only=local_files_only,
+                    use_auth_token=use_auth_token,
+                    revision=revision,
+                    subfolder=subfolder,
+                    device_map=device_map,
+                    **kwargs,
+                )
+                model = cls.from_config(config, **unused_kwargs)
+
+                # Convert the weights
+                from .modeling_pytorch_flax_utils import load_flax_checkpoint_in_pytorch_model
+                model = load_flax_checkpoint_in_pytorch_model(model, model_file)
+            else:
+                raise EnvironmentError(
+                    "Can't load the model in Flax format because Flax or PyTorch is not installed. "
+                    "Please, install Flax and PyTorch or use native PyTorch weights."
+                )
         if is_safetensors_available():
             try:
                 model_file = cls._get_model_file(
@@ -456,7 +495,7 @@ class ModelMixin(torch.nn.Module):
         if model_file is None:
             model_file = cls._get_model_file(
                 pretrained_model_name_or_path,
-                weights_name=WEIGHTS_NAME if not from_flax else FLAX_WEIGHTS_NAME,
+                weights_name=WEIGHTS_NAME,
                 cache_dir=cache_dir,
                 force_download=force_download,
                 resume_download=resume_download,
@@ -504,32 +543,6 @@ class ModelMixin(torch.nn.Module):
                 "mismatched_keys": [],
                 "error_msgs": [],
             }
-        if from_flax:
-            if is_flax_available():
-                config, unused_kwargs = cls.load_config(
-                    config_path,
-                    cache_dir=cache_dir,
-                    return_unused_kwargs=True,
-                    force_download=force_download,
-                    resume_download=resume_download,
-                    proxies=proxies,
-                    local_files_only=local_files_only,
-                    use_auth_token=use_auth_token,
-                    revision=revision,
-                    subfolder=subfolder,
-                    device_map=device_map,
-                    **kwargs,
-                )
-                model = cls.from_config(config, **unused_kwargs)
-
-                # Convert the weights
-                from .modeling_pytorch_flax_utils import load_flax_checkpoint_in_pytorch_model
-                model = load_flax_checkpoint_in_pytorch_model(model, model_file)
-            else:
-                raise EnvironmentError(
-                    "Can't load the model in Flax format because Flax or PyTorch is not installed. "
-                    "Please, install Flax and PyTorch or use native PyTorch weights."
-                )
         else:
             config, unused_kwargs = cls.load_config(
                 config_path,
