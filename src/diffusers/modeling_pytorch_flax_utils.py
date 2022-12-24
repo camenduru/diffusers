@@ -68,7 +68,6 @@ def load_flax_weights_in_pytorch_model(pt_model, flax_state):
     """Load flax checkpoints in a PyTorch model"""
 
     # flax_state = jax.tree_util.tree_map(lambda x: jax.device_put(x, jax.devices("cpu")[0]), flax_state)
-    
     # flax_state = flatten_dict(flax_state)
 
     # with open("/content/flax_nested_state_dict_keys_flattened.txt", "w") as f:
@@ -100,7 +99,7 @@ def load_flax_weights_in_pytorch_model(pt_model, flax_state):
             lambda params: params.astype(np.float32) if params.dtype == jnp.bfloat16 else params, flax_state
         )
 
-
+    logger.warning(f"pt_model.base_model_prefix {pt_model.base_model_prefix}")
     pt_model.base_model_prefix = ""
 
     flax_state_dict = flatten_dict(flax_state)
