@@ -475,11 +475,28 @@ class ModelMixin(torch.nn.Module):
                     "Can't load the model in Flax format because Flax or PyTorch is not installed. "
                     "Please, install Flax and PyTorch or use native PyTorch weights."
                 )
-        if is_safetensors_available():
-            try:
+        else:
+            if is_safetensors_available():
+                try:
+                    model_file = cls._get_model_file(
+                        pretrained_model_name_or_path,
+                        weights_name=SAFETENSORS_WEIGHTS_NAME,
+                        cache_dir=cache_dir,
+                        force_download=force_download,
+                        resume_download=resume_download,
+                        proxies=proxies,
+                        local_files_only=local_files_only,
+                        use_auth_token=use_auth_token,
+                        revision=revision,
+                        subfolder=subfolder,
+                        user_agent=user_agent,
+                    )
+                except:
+                    pass
+            if model_file is None:
                 model_file = cls._get_model_file(
                     pretrained_model_name_or_path,
-                    weights_name=SAFETENSORS_WEIGHTS_NAME,
+                    weights_name=WEIGHTS_NAME,
                     cache_dir=cache_dir,
                     force_download=force_download,
                     resume_download=resume_download,
@@ -490,60 +507,44 @@ class ModelMixin(torch.nn.Module):
                     subfolder=subfolder,
                     user_agent=user_agent,
                 )
-            except:
-                pass
-        if model_file is None:
-            model_file = cls._get_model_file(
-                pretrained_model_name_or_path,
-                weights_name=WEIGHTS_NAME,
-                cache_dir=cache_dir,
-                force_download=force_download,
-                resume_download=resume_download,
-                proxies=proxies,
-                local_files_only=local_files_only,
-                use_auth_token=use_auth_token,
-                revision=revision,
-                subfolder=subfolder,
-                user_agent=user_agent,
-            )
-        if low_cpu_mem_usage:
-            # Instantiate model with empty weights
-            with accelerate.init_empty_weights():
-                config, unused_kwargs = cls.load_config(
-                    config_path,
-                    cache_dir=cache_dir,
-                    return_unused_kwargs=True,
-                    force_download=force_download,
-                    resume_download=resume_download,
-                    proxies=proxies,
-                    local_files_only=local_files_only,
-                    use_auth_token=use_auth_token,
-                    revision=revision,
-                    subfolder=subfolder,
-                    device_map=device_map,
-                    **kwargs,
-                )
-                model = cls.from_config(config, **unused_kwargs)
+            if low_cpu_mem_usage:
+                # Instantiate model with empty weights
+                with accelerate.init_empty_weights():
+                    config, unused_kwargs = cls.load_config(
+                        config_path,
+                        cache_dir=cache_dir,
+                        return_unused_kwargs=True,
+                        force_download=force_download,
+                        resume_download=resume_download,
+                        proxies=proxies,
+                        local_files_only=local_files_only,
+                        use_auth_token=use_auth_token,
+                        revision=revision,
+                        subfolder=subfolder,
+                        device_map=device_map,
+                        **kwargs,
+                    )
+                    model = cls.from_config(config, **unused_kwargs)
 
-            # if device_map is Non,e load the state dict on move the params from meta device to the cpu
-            if device_map is None:
-                param_device = "cpu"
-                state_dict = load_state_dict(model_file)
-                # move the parms from meta device to cpu
-                for param_name, param in state_dict.items():
-                    set_module_tensor_to_device(model, param_name, param_device, value=param)
-            else:  # else let accelerate handle loading and dispatching.
-                # Load weights and dispatch according to the device_map
-                # by deafult the device_map is None and the weights are loaded on the CPU
-                accelerate.load_checkpoint_and_dispatch(model, model_file, device_map)
+                # if device_map is Non,e load the state dict on move the params from meta device to the cpu
+                if device_map is None:
+                    param_device = "cpu"
+                    state_dict = load_state_dict(model_file)
+                    # move the parms from meta device to cpu
+                    for param_name, param in state_dict.items():
+                        set_module_tensor_to_device(model, param_name, param_device, value=param)
+                else:  # else let accelerate handle loading and dispatching.
+                    # Load weights and dispatch according to the device_map
+                    # by deafult the device_map is None and the weights are loaded on the CPU
+                    accelerate.load_checkpoint_and_dispatch(model, model_file, device_map)
 
-            loading_info = {
-                "missing_keys": [],
-                "unexpected_keys": [],
-                "mismatched_keys": [],
-                "error_msgs": [],
-            }
-        else:
+                loading_info = {
+                    "missing_keys": [],
+                    "unexpected_keys": [],
+                    "mismatched_keys": [],
+                    "error_msgs": [],
+                }
+            else:
             config, unused_kwargs = cls.load_config(
                 config_path,
                 cache_dir=cache_dir,
