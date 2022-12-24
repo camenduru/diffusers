@@ -169,7 +169,7 @@ def load_flax_weights_in_pytorch_model(pt_model, flax_state):
             flax_key_tuple_array = flax_key_tuple_array[:-1] + ["weight"]
 
         for i, flax_key_tuple_string in enumerate(flax_key_tuple_array):
-            flax_key_tuple_array[i] = flax_key_tuple_string.replace('_0', '.0').replace('_1', '.1').replace('_2', '.2')
+            flax_key_tuple_array[i] = flax_key_tuple_string.replace('_0', '.0').replace('_1', '.1').replace('_2', '.2').replace('_3', '.3')
 
         flax_key = ".".join(flax_key_tuple_array)
 
