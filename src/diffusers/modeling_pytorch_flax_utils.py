@@ -101,7 +101,7 @@ def load_flax_weights_in_pytorch_model(pt_model, flax_state):
 
     pt_model.base_model_prefix = ""
 
-    flax_state_dict = flatten_dict(flax_state)
+    flax_state_dict = flatten_dict(flax_state, sep=".")
     pt_model_dict = pt_model.state_dict()
 
     load_model_with_head_into_base_model = (pt_model.base_model_prefix in flax_state) and (
@@ -155,13 +155,18 @@ def load_flax_weights_in_pytorch_model(pt_model, flax_state):
     #         # weight is not expected by PyTorch model
     #         unexpected_keys.append(flax_key)
 
-    for flax_key_tuple, flax_tensor in sorted(flax_state_dict.items()):
+    for flax_key_tuple, flax_tensor in flax_state_dict.items():
+
         flax_key_tuple_array = flax_key_tuple.split('.')
+
         if flax_key_tuple_array[-1] == "kernel" and flax_tensor.ndim == 4:
             flax_key_tuple_array = flax_key_tuple_array[:-1] + ["weight"]
             flax_tensor = jnp.transpose(flax_tensor, (3, 2, 0, 1))
-
-        if flax_key_tuple_array[-1] == "scale":
+        elif flax_key_tuple_array[-1] == "kernel":
+            flax_key_tuple_array = flax_key_tuple_array[:-1] +  ["weight"]
+            flax_tensor = flax_tensor.T
+            print(flax_key_tuple)
+        elif flax_key_tuple_array[-1] == "scale":
             flax_key_tuple_array = flax_key_tuple_array[:-1] + ["weight"]
 
         for i, flax_key_tuple_string in enumerate(flax_key_tuple_array):
