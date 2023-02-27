@@ -563,7 +563,7 @@ class CrossAttention(nn.Module):
         # TODO(PVP) - mask is currently never used. Remember to re-implement when used
 
         # attention, what we cannot get enough of
-        if self._use_memory_efficient_attention_xformers:
+        if True:
             hidden_states = self._memory_efficient_attention_xformers(query, key, value)
             # Some versions of xformers return output in fp32, cast it back to the dtype of the input
             hidden_states = hidden_states.to(query.dtype)
