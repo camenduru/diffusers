@@ -60,6 +60,12 @@ class UNetFreeUConfig:
     b1: float = 1.0
     b2: float = 1.0
 
+    def sd14(self):
+        self.s1 = 0.9
+        self.s2 = 0.2
+        self.b1 = 1.2
+        self.b2 = 1.4
+
     def sd21(self):
         self.s1 = 0.9
         self.s2 = 0.2
